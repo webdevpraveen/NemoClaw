@@ -18,9 +18,17 @@ status: published
   SPDX-License-Identifier: Apache-2.0
 -->
 
+<!-- markdownlint-disable MD014 -->
+
 # Troubleshooting
 
 This page covers common issues you may encounter when installing, onboarding, or running NemoClaw, along with their resolution steps.
+
+:::{admonition} Get Help
+:class: tip
+
+If your issue is not listed here, join the [NemoClaw Discord channel](https://discord.gg/XFpfPv9Uvx) to ask questions and get help from the community. You can also [file an issue on GitHub](https://github.com/NVIDIA/NemoClaw/issues/new).
+:::
 
 ## Installation
 
@@ -36,6 +44,63 @@ Run `source ~/.bashrc` (or `source ~/.zshrc` for zsh), or open a new terminal wi
 The installer checks for a supported OS and architecture before proceeding.
 NemoClaw requires Linux Ubuntu 22.04 LTS or later.
 If you see an unsupported platform error, verify that you are running on a supported Linux distribution.
+
+### Node.js version is too old
+
+NemoClaw requires Node.js 20 or later.
+If the installer exits with a Node.js version error, check your current version:
+
+```console
+$ node --version
+```
+
+If the version is below 20, install a supported release.
+If you use nvm, run:
+
+```console
+$ nvm install 20
+$ nvm use 20
+```
+
+Then re-run the installer.
+
+### Docker is not running
+
+The installer and onboard wizard require Docker to be running.
+If you see a Docker connection error, start the Docker daemon:
+
+```console
+$ sudo systemctl start docker
+```
+
+On macOS with Docker Desktop, open the Docker Desktop application and wait for it to finish starting before retrying.
+
+### npm install fails with permission errors
+
+If `npm install` fails with an `EACCES` permission error, do not run npm with `sudo`.
+Instead, configure npm to use a directory you own:
+
+```console
+$ mkdir -p ~/.npm-global
+$ npm config set prefix ~/.npm-global
+$ export PATH=~/.npm-global/bin:$PATH
+```
+
+Add the `export` line to your `~/.bashrc` or `~/.zshrc` to make it permanent, then re-run the installer.
+
+### Port already in use
+
+The NemoClaw gateway uses port `18789` by default.
+If another process is already bound to this port, onboarding fails.
+Identify the conflicting process, verify it is safe to stop, and terminate it:
+
+```console
+$ lsof -i :18789
+$ kill <PID>
+```
+
+If the process does not exit, use `kill -9 <PID>` to force-terminate it.
+Then retry onboarding.
 
 ## Onboarding
 
@@ -86,7 +151,7 @@ Run `nemoclaw onboard` to recreate the sandbox from the same blueprint and polic
 ### Status shows "not running" inside the sandbox
 
 This is expected behavior.
-When running `openclaw nemoclaw status` inside an active sandbox, host-side sandbox state and inference configuration are not inspectable.
+When checking status inside an active sandbox, host-side sandbox state and inference configuration are not inspectable.
 The status command detects the sandbox context and reports "active (inside sandbox)" instead.
 
 Run `openshell sandbox list` on the host to check the underlying sandbox state.
@@ -97,10 +162,11 @@ Verify that the inference provider endpoint is reachable from the host.
 Check the active provider and endpoint:
 
 ```console
-$ openclaw nemoclaw status
+$ nemoclaw <name> status
 ```
 
-If the endpoint is correct but requests still fail, check for network policy rules that may block the connection, and verify that your NVIDIA API key is valid.
+If the endpoint is correct but requests still fail, check for network policy rules that may block the connection.
+Then verify the credential and base URL for the provider you selected during onboarding.
 
 ### Agent cannot reach an external host
 
@@ -119,8 +185,7 @@ Refer to [Customize the Network Policy](../network-policy/customize-network-poli
 View the error output for the failed blueprint run:
 
 ```console
-$ openclaw nemoclaw logs --run-id <id>
+$ nemoclaw <name> logs
 ```
 
-If the run ID is unknown, omit `--run-id` to view logs from the most recent run.
 Use `--follow` to stream logs in real time while debugging.
